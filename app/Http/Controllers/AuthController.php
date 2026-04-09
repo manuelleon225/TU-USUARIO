@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
@@ -13,22 +14,37 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        // Validar los datos que llegan desde el cliente
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6'
-        ]);
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users',
+                'password' => 'required|min:6'
+            ],
+            // 👇 MENSAJES PERSONALIZADOS EN ESPAÑOL
+            [
+                'name.required' => 'El nombre es obligatorio',
+                'email.required' => 'El correo es obligatorio',
+                'email.email' => 'El correo no es válido',
+                'email.unique' => 'Este correo ya está registrado',
+                'password.required' => 'La contraseña es obligatoria',
+                'password.min' => 'La contraseña debe tener mínimo 6 caracteres'
+            ]
+        );
 
-        // Crear el usuario en la base de datos
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Error en los datos enviados',
+                'detalles' => $validator->errors()
+            ], 422);
+        }
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            // Encriptar la contraseña por seguridad
             'password' => Hash::make($request->password)
         ]);
 
-        // Retornar respuesta exitosa
         return response()->json([
             'mensaje' => 'Usuario registrado correctamente'
         ], 201);
